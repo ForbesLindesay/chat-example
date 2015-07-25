@@ -35,7 +35,7 @@ function getQueries(queries, queryCollection) {
   return Promise.all(Object.keys(queries).map(collectionName => {
     return Promise.all(queries[collectionName].map(query =>
       Promise.resolve(queryCollection(collectionName, query.query)).then(ids => {
-        return {key: query.key, ids};
+        return {key: query.key, ids: ids.map(id => id + '')};
       })
     )).then(res => results[collectionName] = res);
   })).then(() => results);
@@ -44,7 +44,9 @@ function getRecords(records, getRecord) {
   var results = {};
   return Promise.all(Object.keys(records).map(collectionName => {
     return Promise.all(records[collectionName].map(id =>
-      Promise.resolve(getRecord(collectionName, id))
+      Promise.resolve(getRecord(collectionName, id)).then(record =>
+        record ? record : {id, notFound: true}
+      )
     )).then(res => results[collectionName] = res);
   })).then(() => results);
 }

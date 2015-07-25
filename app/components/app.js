@@ -13,7 +13,7 @@ export default class App {
         <ul>
           {
             this.props.channels.map(channel => (
-              <li>{channel.name}</li>
+              <li key={channel.id}>{channel.name}</li>
             ))
           }
         </ul>

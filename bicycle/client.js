@@ -1,9 +1,7 @@
 'use strict';
 
 import sha from 'stable-sha1';
-import React from 'react';
-import {Connector} from 'react-redux';
-import {Map as ImmutableMap} from 'immutable';
+import {Map as ImmutableMap, fromJS} from 'immutable';
 
 const LOAD_DB_RECORDS = 'LOAD_DB_RECORDS';
 const LOADED_DB_RECORDS = 'LOADED_DB_RECORDS';
@@ -14,21 +12,32 @@ const initialState = {
 };
 
 export default reducer;
+
+const NOT_LOADED = new ImmutableMap({loaded: false});
 export function reducer(state = initialState, action) {
+  if (typeof state.queries.get !== 'function') {
+    state = {queries: fromJS(state.queries), records: fromJS(state.records)};
+  }
   if (action.type === LOAD_DB_RECORDS) {
     var queries = state.queries;
     var records = state.records;
     if (action.queries) {
       Object.keys(action.queries).forEach(collectionName => {
         action.queries[collectionName].forEach(query => {
-          queries = queries.setIn([collectionName, query.key], {loaded: false});
+          queries = queries.setIn(
+            [collectionName, query.key],
+            NOT_LOADED
+          );
         });
       });
     }
     if (action.records) {
       Object.keys(action.records).forEach(collectionName => {
         action.records[collectionName].forEach(id => {
-          records = records.setIn([collectionName, id], {loaded: false});
+          records = records.setIn(
+            [collectionName, id],
+            NOT_LOADED
+          );
         });
       });
     }
@@ -40,14 +49,20 @@ export function reducer(state = initialState, action) {
     if (action.queries) {
       Object.keys(action.queries).forEach(collectionName => {
         action.queries[collectionName].forEach(results => {
-          queries = queries.setIn([collectionName, results.key], {loaded: true, ids: results.ids});
+          queries = queries.setIn(
+            [collectionName, results.key],
+            new ImmutableMap({loaded: true, ids: fromJS(results.ids)})
+          );
         });
       });
     }
     if (action.records) {
       Object.keys(action.records).forEach(collectionName => {
         action.records[collectionName].forEach(record => {
-          records = records.setIn([collectionName, record.id], {loaded: true, id: record.id, value: record});
+          records = records.setIn(
+            [collectionName, record.id],
+            new ImmutableMap({loaded: true, id: record.id, value: fromJS(record)})
+          );
         });
       });
     }
@@ -66,9 +81,9 @@ function runQuery(db, collectionName, query) {
   var key = sha(query);
   var results;
   if (results = db.queries.get(collectionName) && db.queries.get(collectionName).get(key)) {
-    if (results.loaded) {
+    if (results.get('loaded')) {
       return {
-        ids: results.ids,
+        ids: results.get('ids').toArray(),
         newQuery: null
       };
     } else {
@@ -98,8 +113,8 @@ function getIds(db, collectionName, ids) {
   var records = ids.map(id => {
     var record = db.records.get(collectionName).get(id);
     if (record) {
-      if (record.loaded) {
-        return {loaded: true, id, value: record.value};
+      if (record.get('loaded')) {
+        return {loaded: true, id, value: record.get('value').toJS()};
       } else {
         loaded = false;
         return {loaded: false, id};

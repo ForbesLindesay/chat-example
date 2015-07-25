@@ -1,19 +1,23 @@
 'use strict';
 
-import React from 'react';
+import React, { PropTypes } from 'react';
 import { Connector } from 'react-redux';
 import { getState } from './client';
-import server from '../api';
 
 export default function connect(query) {
   return DecoratedComponent => React.createClass({
     displayName: 'BicycleConnector',
+
+    contextTypes: {
+      bicycleServer: PropTypes.func.isRequired
+    },
+
     renderDecoratedComponent({dispatch, db}) {
       var q = query(this.props);
 
       return React.createElement(
         DecoratedComponent,
-        {...getState(dispatch, db, q, server), ...this.props}
+        {...getState(dispatch, db, q, this.context.bicycleServer), ...this.props}
       );
     },
     render() {
