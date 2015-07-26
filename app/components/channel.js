@@ -6,7 +6,7 @@ import connect from '../../bicycle/connect';
 @connect(props => ({channels: {id: props.params.channel}}))
 export default class ChannelSelector {
   render() {
-    if (this.props.loading) {
+    if (!this.props.loaded) {
       return <div>Loading...</div>;
     }
     return (
