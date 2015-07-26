@@ -4,8 +4,8 @@ import bicycle from '../bicycle/server';
 
 const database = {
   channels: [
-    {id: '0', name: 'React'},
-    {id: '1', name: 'Redux'},
+    {id: 'react', name: 'React'},
+    {id: 'redux', name: 'Redux'},
   ]
 };
 

@@ -14,10 +14,10 @@ export default function connect(query) {
 
     renderDecoratedComponent({dispatch, db}) {
       var q = query(this.props);
-
+      var state = q ? getState(dispatch, db, q, this.context.bicycleServer) : {};
       return React.createElement(
         DecoratedComponent,
-        {...getState(dispatch, db, q, this.context.bicycleServer), ...this.props}
+        {...state, ...this.props}
       );
     },
     render() {

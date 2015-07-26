@@ -11,7 +11,7 @@
     "immutable": "^3.7.4",
     "js-stringify": "^1.0.1",
     "promise": "^7.0.3",
-    "react": "^0.14.0-beta1",
+    "react": "^0.13.0",
     "react-redux": "^0.2.2",
     "react-router": "^1.0.0-beta3",
     "redux": "^1.0.0-alpha",

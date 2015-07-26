@@ -31,6 +31,7 @@ function promiseMiddleware(next, onError) {
 function render(path, query) {
   return new Promise(function (resolve, reject) {
     var location = new Location(path, query);
+    var statusCode = 200;
     Router.run(
       app.routes,
       location,
@@ -63,23 +64,35 @@ function render(path, query) {
             };
           };
         }
+        var middleware = (app.middleware || []).concat([
+          promiseMiddleware,
+          function (next) {
+            return function (action) {
+              console.dir(action, {depth: 10, colors: true});
+              dirty = true;
+              next(action);
+              if (!running) {
+                running = true;
+                run();
+              }
+            };
+          }
+        ]).map(wrapMiddleware);
+        middleware.unshift(function (next) {
+          return function (action) {
+            if (action.type === 'SET_STATUS_CODE') {
+              statusCode = action.statusCode;
+            } else if (action.type === 'FALLBACK_TO_SERVER') {
+              return reject();
+            } else {
+              next(action);
+            }
+          }
+        });
         var store = Redux.createStore(
           app.reducers,
           undefined,
-          (app.middleware || []).concat([
-            promiseMiddleware,
-            function (next) {
-              return function (action) {
-                console.dir(action, {depth: 10, colors: true});
-                dirty = true;
-                next(action);
-                if (!running) {
-                  running = true;
-                  run();
-                }
-              };
-            }
-          ]).map(wrapMiddleware)
+          middleware
         );
 
         function getElement() {
@@ -109,7 +122,7 @@ function render(path, query) {
             );
             run();
           } else if (pending === 0) {
-            resolve({html: html, state: store.getState()});
+            resolve({html: html, state: store.getState(), status: statusCode});
           } else {
             running = false;
           }
@@ -136,7 +149,8 @@ server.use(function (req, res, onError) {
   render(req.path, req.query).done(function (result) {
     var html = result.html;
     var state = result.state;
-    res.send(
+    res.status(result.status).send(
+      '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" />' +
       '<div id="react-root">' + html + '</div>' +
       '<script>var INITIAL_STATE = (' + stringify(state) + ');</script>' +
       '<script src="/client.js"></script>'
@@ -145,3 +159,4 @@ server.use(function (req, res, onError) {
 });
 
 server.listen(3000);
+console.log('listening on port 3000');

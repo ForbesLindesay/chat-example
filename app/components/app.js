@@ -1,25 +1,25 @@
 'use strict';
 
 import React from 'react';
-import connect from '../../bicycle/connect';
+import { Link } from 'react-router';
+import ChannelSelector from './channel-selector';
 
-@connect(props => ({
-  channels: {}
-}))
 export default class App {
   render() {
-    if (this.props.channels) {
-      return (
-        <ul>
-          {
-            this.props.channels.map(channel => (
-              <li key={channel.id}>{channel.name}</li>
-            ))
-          }
-        </ul>
-      );
-    } else {
-      return (<div>Loading Channels...</div>);
-    }
+    return (
+      <div className="container">
+        <div className="row">
+          <div className="col-md-2">
+            <ul>
+              <li><Link to="/">New Channel</Link></li>
+            </ul>
+            <ChannelSelector />
+          </div>
+          <div className="col-md-10">
+            {this.props.children}
+          </div>
+        </div>
+      </div>
+    );
   }
 };
