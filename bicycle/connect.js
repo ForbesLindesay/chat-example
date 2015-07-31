@@ -3,8 +3,9 @@
 import React, { PropTypes } from 'react';
 import { connect as reduxConnect } from 'react-redux';
 import { getData, generateAction } from './lib/reducer.js';
+import { set, remove } from './lib/writers';
 
-export default function connect(query) {
+export default function connect(query, write) {
   return DecoratedComponent => reduxConnect(state => ({db: state.db}))(React.createClass({
     displayName: 'BicycleConnector',
 
@@ -25,16 +26,28 @@ export default function connect(query) {
         props.dispatch(action);
         props.dispatch(this.context.bicycleServer(action));
       }
-    }
+    },
+    
+    set(collection, id, value) {
+      this.props.dispatch(set(collection, id, value));
+    },
+    remove(collection, id) {
+      this.props.dispatch(remove(collection, id));
     },
     
     renderDecoratedComponent() {
       const q = query(this.props);
       let result = q ? getData(this.props.db, q) : {};
+      let writers = {
+        set: this.set,
+        remove: this.remove
+      };
+      let customWriters = write && write(writers, this.props);
+      customWriters = customWriters || {};
 
       return React.createElement(
         DecoratedComponent,
-        {...result, ...this.props}
+        {...writers, ...customWriters, ...result, ...this.props}
       );
     },
     render() {

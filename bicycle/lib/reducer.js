@@ -6,7 +6,7 @@ import sha from 'stable-sha1';
 import {applyFilter, applySort} from '../utils';
 
 import {
-  UPDATE_ITEM,
+  SET_ITEM,
   REQUEST_RANGE,
   REQUEST_RANGE_RESPONSE,
   REQUEST_COUNT,
@@ -43,7 +43,7 @@ function updateContainer(container, action, oldRecordValues) {
     return container.set(COUNT, action.count);
   }
   // {type: String, id: String, item: Object}
-  if (action.type === UPDATE_ITEM) {
+  if (action.type === SET_ITEM) {
     let oldContainer = container;
     let serverCount = container.get(COUNT);
     let itemId = action.id;
@@ -61,12 +61,12 @@ function updateContainer(container, action, oldRecordValues) {
     }
 
     if (!item || !applyFilter(filter, item)) {
-      if (serverCount !== -1 && applyFilter(filter, oldRecords.get(itemId))) {
+      if (serverCount !== -1 && oldRecordValues.get(itemId) && applyFilter(filter, oldRecordValues.get(itemId))) {
         container = container.set(COUNT, serverCount - 1)
       }
       return container;
     } else {
-      if (serverCount !== -1 && !(oldRecords.get(itemId) && applyFilter(filter, oldRecords.get(itemId)))) {
+      if (serverCount !== -1 && !(oldRecordValues.get(itemId) && applyFilter(filter, oldRecordValues.get(itemId)))) {
         container = container.set(COUNT, serverCount + 1);
       }
     }
@@ -74,7 +74,7 @@ function updateContainer(container, action, oldRecordValues) {
     
     let newIndex = 0;
     records.some(existingItemId => {
-      let existingItem = oldRecords.get(existingItemId);
+      let existingItem = oldRecordValues.get(existingItemId);
       if (applySort(sort, existingItem, item) > 0) { // if (existingItem > item)
         return true;
       } else {
@@ -158,11 +158,11 @@ function updateCollection(collection = INITIAL_COLLECTION_STATE, action) {
         collection = collection.set(RECORDS, records);
       }
       break;
-    case UPDATE_ITEM:
+    case SET_ITEM:
       // TODO: remove item if it no longer matches any queries?
       collection = collection.set(
         CONTAINERS,
-        collection.containers.map(container =>
+        collection.get(CONTAINERS).map(container =>
           updateContainer(container, action, records)
         )
       );

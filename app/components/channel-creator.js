@@ -5,12 +5,10 @@ import connect from '../../bicycle/connect';
 
 @connect(
   props => undefined,
-  write => (
+  ({set, remove}) => (
     {
       createChannel(id, name) {
-        write([
-          {collection: 'channels', id: id, value: {id, name}}
-        ]);
+        set('channels', id, {id, name});
       }
     }
   )
@@ -23,12 +21,13 @@ export default class ChannelSelector extends Component{
     };
   }
   onChange(e) {
-    this.setState({name: e.target.name});
+    this.setState({name: e.target.value});
   }
   create(e) {
     e.preventDefault();
-    this.props.createChannel(id, name).done(function () {
-    });
+    let name = this.state.name;
+    let id = name.toLowerCase().replace(/[^a-z]/g, '');
+    this.props.createChannel(id, name);
   }
   render() {
     return (
@@ -42,9 +41,9 @@ export default class ChannelSelector extends Component{
           <h2>New Channel</h2>
           <div className="form-group">
             <label>Channel Name</label>
-            <input className="form-control" value={this.state.name} onChange={this.onChange}/>
+            <input className="form-control" value={this.state.name} onChange={this.onChange.bind(this)}/>
           </div>
-          <button className="btn btn-default" onClick={this.create}>Create</button>
+          <button className="btn btn-default" onClick={this.create.bind(this)}>Create</button>
         </form>
       </div>
     );

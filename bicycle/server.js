@@ -3,7 +3,7 @@
 import Promise from 'promise';
 
 import {
-  UPDATE_ITEM,
+  SET_ITEM,
   REQUEST_RANGE,
   REQUEST_RANGE_RESPONSE,
   REQUEST_COUNT,

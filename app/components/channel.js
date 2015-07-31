@@ -9,6 +9,10 @@ export default class ChannelSelector {
     if (!this.props.loaded) {
       return <div>Loading...</div>;
     }
+    if (!this.props.channels.length) {
+      this.props.dispatch({type: 'SET_STATUS_CODE', statusCode: 404});
+      return <div>Channel not found</div>;
+    }
     return (
       <h1>{this.props.channels[0].name}</h1>
     );
