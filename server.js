@@ -2,7 +2,8 @@
 
 require("babel/register")(
   {
-    optional: ['es7.objectRestSpread','es7.decorators']
+    optional: ['es7.objectRestSpread','es7.decorators'],
+    //plugins: ['loop-detector']
   }
 );
 
@@ -20,11 +21,13 @@ var server = express();
 
 var app = require('./app');
 
-function promiseMiddleware(next, onError) {
-  return function (action) {
-    action && typeof action.then === 'function'
-      ? Promise.resolve(action).done(next, onError)
-      : next(action);
+function promiseMiddleware(store) {
+  return function (next, onError) {
+    return function (action) {
+      action && typeof action.then === 'function'
+        ? Promise.resolve(action).done(next, onError)
+        : next(action);
+    }
   }
 }
 
@@ -40,61 +43,72 @@ function render(path, query) {
         if (!initialState) return reject();
         var pending = 0, dirty = true, running = false;
         function wrapMiddleware(middleware) {
-          return function (next) {
-            var sync = false;
-            var syncCount = 0;
-            middleware = middleware(function (action) {
-              if (sync) {
-                syncCount++;
-              } else {
-                pending--;
-              }
-              next(action);
-            });
-            return function (action) {
-              sync = true;
-              syncCount = 0;
-              var count = middleware(action);
-              if (typeof count !== 'number') {
-                count = 1;
-              }
-              pending += count;
-              sync = false;
-              pending -= syncCount;
+          var err = new TypeError('middleware is not a function');
+          return function (store) {
+            var middlwareWithStore = middleware(store);
+            if (typeof middleware !== 'function') {
+              throw err;
+            }
+            return function (next) {
+              var sync = false;
+              var syncCount = 0;
+              var middlewareWithNext = middlwareWithStore(function (action) {
+                if (sync) {
+                  syncCount++;
+                } else {
+                  pending--;
+                }
+                next(action);
+              }, reject);
+              return function (action) {
+                sync = true;
+                syncCount = 0;
+                var count = middlewareWithNext(action);
+                if (typeof count !== 'number') {
+                  count = 1;
+                }
+                pending += count;
+                sync = false;
+                pending -= Math.min(syncCount, count);
+              };
             };
           };
         }
         var middleware = (app.middleware || []).concat([
           promiseMiddleware,
-          function (next) {
-            return function (action) {
-              console.dir(action, {depth: 10, colors: true});
-              dirty = true;
-              next(action);
-              if (!running) {
-                running = true;
-                run();
-              }
-            };
+          function (store) {
+            return function (next) {
+              return function (action) {
+                console.dir(action, {depth: 10, colors: true});
+                dirty = true;
+                next(action);
+                if (!running) {
+                  running = true;
+                  run();
+                }
+              };
+            }
           }
         ]).map(wrapMiddleware);
-        middleware.unshift(function (next) {
-          return function (action) {
-            if (action.type === 'SET_STATUS_CODE') {
-              statusCode = action.statusCode;
-            } else if (action.type === 'FALLBACK_TO_SERVER') {
-              return reject();
-            } else {
-              next(action);
+        middleware.unshift(function (store) {
+          return function (next) {
+            return function (action) {
+              if (action.type === 'SET_STATUS_CODE') {
+                if (statusCode !== action.statusCode) {
+                  statusCode = action.statusCode;
+                  next(action);
+                }
+              } else if (action.type === 'FALLBACK_TO_SERVER') {
+                return reject();
+              } else {
+                next(action);
+              }
             }
           }
         });
-        var store = Redux.createStore(
-          app.reducers,
-          undefined,
-          middleware
+        var store = Redux.applyMiddleware.apply(null, middleware)(Redux.createStore)(
+          Redux.combineReducers(app.reducers)
         );
-
         function getElement() {
           return React.createElement(
             ReduxProvider,

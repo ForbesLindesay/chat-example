@@ -2,51 +2,64 @@
 
 import Promise from 'promise';
 
-export default function (request, {queryCollection, getRecord}) {
-  var response = {};
-  var pending = [];
-  if (request.queries) {
-    pending.push(
-      getQueries(
-        request.queries,
-        queryCollection
-      ).then(
-        queries => response.queries = queries
-      )
-    );
-  }
-  if (request.records) {
-    pending.push(
-      getRecords(
-        request.records,
-        getRecord
-      ).then(
-        records => response.records = records
-      )
-    );
-  }
-  return Promise.all(pending).then(() => {
-    return response;
-  });
-}
+import {
+  UPDATE_ITEM,
+  REQUEST_RANGE,
+  REQUEST_RANGE_RESPONSE,
+  REQUEST_COUNT,
+  REQUEST_COUNT_RESPONSE,
+  REQUEST_RESPONSE_ERROR,
+  BATCH,
+} from './lib/constants.js';
 
-function getQueries(queries, queryCollection) {
-  var results = {};
-  return Promise.all(Object.keys(queries).map(collectionName => {
-    return Promise.all(queries[collectionName].map(query =>
-      Promise.resolve(queryCollection(collectionName, query.query)).then(ids => {
-        return {key: query.key, ids: ids.map(id => id + '')};
-      })
-    )).then(res => results[collectionName] = res);
-  })).then(() => results);
-}
-function getRecords(records, getRecord) {
-  var results = {};
-  return Promise.all(Object.keys(records).map(collectionName => {
-    return Promise.all(records[collectionName].map(id =>
-      Promise.resolve(getRecord(collectionName, id)).then(record =>
-        record ? record : {id, notFound: true}
-      )
-    )).then(res => results[collectionName] = res);
-  })).then(() => results);
-}
+export default function handleRequest(action, {getCount, getRange}) {
+  switch (action.type) {
+    case BATCH:
+      return Promise.all(
+        action.actions.map(action => handleRequest(action, {getCount, getRange}))
+      ).then(
+        actions => ({type: BATCH, actions: actions.filter(Boolean)})
+      );
+    case REQUEST_COUNT:
+      return Promise.resolve(
+        getCount(
+          action.collection,
+          {filter: action.filter}
+        )
+      ).then(
+        count => (
+          {
+            type: REQUEST_COUNT_RESPONSE,
+            collection: action.collection,
+            container: action.container,
+            count: count
+          }
+        )
+      );
+    case REQUEST_RANGE:
+      return Promise.resolve(
+        getRange(
+          action.collection,
+          {
+            filter: action.filter,
+            sort: action.sort,
+            from: action.from,
+            offset: action.offset,
+            limit: action.limit
+          }
+        )
+      ).then(
+        records => (
+          {
+            type: REQUEST_RANGE_RESPONSE,
+            collection: action.collection,
+            container: action.container,
+            offset: action.offset,
+            records: records
+          }
+        )
+      );
+    default:
+      return {type: 'BICYCLE_EMPTY'};
+  }
+};

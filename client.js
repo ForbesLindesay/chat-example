@@ -9,27 +9,31 @@ var ReduxProvider = require('react-redux').Provider;
 
 var app = require('./app');
 
-function promiseMiddleware(next, onError) {
-  return function (action) {
-    action && typeof action.then === 'function'
-      ? Promise.resolve(action).done(next, onError)
-      : next(action);
-  }
+function promiseMiddleware(store) {
+  return function (next, onError) {
+    return function (action) {
+      action && typeof action.then === 'function'
+        ? Promise.resolve(action).done(next, onError)
+        : next(action);
+    };
+  };
 }
 
-var store = Redux.createStore(
-  app.reducers,
-  INITIAL_STATE,
-  (app.middleware || []).concat([
-    promiseMiddleware,
-    function (next) {
+var middleware = (app.middleware || []).concat([
+  promiseMiddleware,
+  function (store) {
+    return function (next) {
       return function (action) {
         console.log('action');
         console.dir(action, {depth: 10, colors: true});
         next(action);
       };
-    }
-  ])
+    };
+  }
+]);
+var store = Redux.applyMiddleware.apply(null, middleware)(Redux.createStore)(
+  Redux.combineReducers(app.reducers),
+  INITIAL_STATE
 );
 INITIAL_STATE = null;
 

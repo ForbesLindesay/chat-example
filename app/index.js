@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Route, NotFoundRoute } from 'react-router';
-import dbReducer from '../bicycle/client';
+import dbReducer from '../bicycle/reducer';
 import BicycleProvider from '../bicycle/provider';
 import server from '../api';
 
