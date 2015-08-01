@@ -12,13 +12,24 @@ import {
   BATCH,
 } from './lib/constants.js';
 
-export default function handleRequest(action, {getCount, getRange}) {
+const EMPTY = 'BICYCLE_EMPTY';
+
+export default function handleRequest(action, {getCount, getRange, setItem}) {
   switch (action.type) {
     case BATCH:
       return Promise.all(
-        action.actions.map(action => handleRequest(action, {getCount, getRange}))
+        action.actions.map(
+          action => handleRequest(action, {getCount, getRange})
+        )
       ).then(
-        actions => ({type: BATCH, actions: actions.filter(Boolean)})
+        actions => (
+          {
+            type: BATCH,
+            actions: actions.filter(
+              action => action.type !== EMPTY
+            )
+          }
+        )
       );
     case REQUEST_COUNT:
       return Promise.resolve(
@@ -59,7 +70,13 @@ export default function handleRequest(action, {getCount, getRange}) {
           }
         )
       );
+    case SET_ITEM:
+      return Promise.resolve(
+        setItem(action.collection, action.id, action.item)
+      ).then(
+        () => ({type: EMPTY})
+      );
     default:
-      return {type: 'BICYCLE_EMPTY'};
+      return Promise.resolve({type: EMPTY});
   }
 };

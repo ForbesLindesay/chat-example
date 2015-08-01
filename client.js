@@ -24,7 +24,7 @@ var middleware = (app.middleware || []).concat([
   function (store) {
     return function (next) {
       return function (action) {
-        console.log('action');
+        console.log('action: ' + action.type);
         console.dir(action, {depth: 10, colors: true});
         next(action);
       };
@@ -36,6 +36,7 @@ var store = Redux.applyMiddleware.apply(null, middleware)(Redux.createStore)(
   INITIAL_STATE
 );
 INITIAL_STATE = null;
+window.REDUX_STORE = store;
 
 function createRoot() {
   return React.createElement(

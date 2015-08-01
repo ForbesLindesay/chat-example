@@ -29,10 +29,14 @@ export default function connect(query, write) {
     },
     
     set(collection, id, value) {
-      this.props.dispatch(set(collection, id, value));
+      let action = set(collection, id, value);
+      this.props.dispatch(action);
+      this.props.dispatch(this.context.bicycleServer(action));
     },
     remove(collection, id) {
-      this.props.dispatch(remove(collection, id));
+      let action = remove(collection, id);
+      this.props.dispatch(action);
+      this.props.dispatch(this.context.bicycleServer(action));
     },
     
     renderDecoratedComponent() {

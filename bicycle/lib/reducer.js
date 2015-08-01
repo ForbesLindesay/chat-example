@@ -129,7 +129,11 @@ const INITIAL_COLLECTION_STATE = new Map({
 });
 function updateCollection(collection = INITIAL_COLLECTION_STATE, action) {
   if (typeof collection.get !== 'function') {
-    collection[CONTAINERS] = fromJS(collection[CONTAINERS]);
+    collection[CONTAINERS] = new Map(collection[CONTAINERS]).map(
+      value => new Map(value).map(
+        (value, key) => key === RECORDS ? new List(value) : value
+      )
+    );
     collection[RECORDS] = new Map(collection[RECORDS]);
     collection = new Map(collection);
   }

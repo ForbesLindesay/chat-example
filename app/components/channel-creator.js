@@ -8,7 +8,7 @@ import connect from '../../bicycle/connect';
   ({set, remove}) => (
     {
       createChannel(id, name) {
-        set('channels', id, {id, name});
+        return set('channels', id, {id, name});
       }
     }
   )

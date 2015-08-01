@@ -2,8 +2,7 @@
 
 require("babel/register")(
   {
-    optional: ['es7.objectRestSpread','es7.decorators'],
-    //plugins: ['loop-detector']
+    optional: ['es7.objectRestSpread','es7.decorators']
   }
 );
 
