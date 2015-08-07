@@ -4,6 +4,7 @@ import assert from 'assert';
 import {Map, List, fromJS} from 'immutable';
 import sha from 'stable-sha1';
 import {applyFilter, applySort} from '../utils';
+import 'array.from';
 
 import {
   SET_ITEM,
@@ -13,6 +14,7 @@ import {
   REQUEST_COUNT_RESPONSE,
   REQUEST_RESPONSE_ERROR,
   BATCH,
+  SUBSCRIBE,
 
   CONTAINERS,
   RECORDS,
@@ -52,7 +54,9 @@ function updateContainer(container, action, oldRecordValues) {
 
     let localCount = records.size;
     let maxItemId = records.get(localCount - 1);
-    let maxItem = records.get(maxItemId);
+    let maxItem = oldRecordValues.get(maxItemId);
+    
+    let requestedCount = container.get(REQUESTED_COUNT);
     
     let oldIndex = records.indexOf(itemId);
     if (oldIndex !== -1) {
@@ -70,7 +74,7 @@ function updateContainer(container, action, oldRecordValues) {
         container = container.set(COUNT, serverCount + 1);
       }
     }
-    if (applySort(sort, item, maxItem) > 0) return container; // if (item > maxItem)
+    if (localCount && requestedCount !== -1 && applySort(sort, item, maxItem) > 0) return container; // if (item > maxItem)
     
     let newIndex = 0;
     records.some(existingItemId => {
@@ -86,6 +90,7 @@ function updateContainer(container, action, oldRecordValues) {
   }
   // {type: String, records: Array<String|{id: String}>, offset: Number}
   if (action.type === REQUEST_RANGE_RESPONSE) {
+    // TODO: handle case where a record is coming in out of order
     let localCount = container.get(RECORDS).size;
     assert(action.offset <= localCount);
     return container.set(
@@ -182,11 +187,14 @@ function updateCollection(collection = INITIAL_COLLECTION_STATE, action) {
 
 export function reducer(state = new Map(), action) {
   if (typeof state.get !== 'function') {
-    state = (new Map(state)).map(collection => updateCollection(collection, {type: '@@init'}));
+    state = (new Map(state)).map((collection, key) => key === 'subscribed' ? collection : updateCollection(collection, {type: '@@init'}));
   }
   if (action.type === BATCH) {
     action.actions.forEach(childAction => state = reducer(state, childAction));
     return state;
+  }
+  if (action.type === SUBSCRIBE) {
+    return state.set('subscribed', true);
   }
   if (
     typeof action.type === 'string' &&
@@ -203,6 +211,8 @@ function generateActionsForCollection(state, collectionName, query) {
   let queryKey = sha({filter: query.filter, sort: query.sort});
   let collection = state && state.get(collectionName);
   let container = collection && collection.get(CONTAINERS).get(queryKey);
+  // TODO: get keys
+  let existingKeys = collection ? collection.get(RECORDS).keySeq().toArray() : [];
   if (!container) {
     return [
       {
@@ -220,7 +230,8 @@ function generateActionsForCollection(state, collectionName, query) {
         sort: query.sort,
         from: null,
         offset: 0,
-        limit: query.count || -1
+        limit: query.count || -1,
+        existingKeys
       }
     ];
   } else {
@@ -252,7 +263,8 @@ function generateActionsForCollection(state, collectionName, query) {
         sort: query.sort,
         from: container.get(RECORDS).get(localSize - 1),
         offset: localSize,
-        limit: query.count ? query.count - localSize : -1
+        limit: query.count ? query.count - localSize : -1,
+        existingKeys
       }
     );
     return actions;

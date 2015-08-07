@@ -3,8 +3,6 @@
 import React from 'react';
 import { Route, NotFoundRoute } from 'react-router';
 import dbReducer from '../bicycle/reducer';
-import BicycleProvider from '../bicycle/provider';
-import server from '../api';
 
 import App from './components/app';
 import ChannelCreator from './components/channel-creator';
@@ -13,9 +11,7 @@ import NotFound from './components/not-found';
 
 export const reducers = { db: dbReducer };
 export const middleware = [];
-export function wrap(getChildren) {
-  return <BicycleProvider server={server}>{getChildren}</BicycleProvider>;
-};
+
 export let routes = [
   <Route component={App}>
     <Route path="/" component={ChannelCreator} />

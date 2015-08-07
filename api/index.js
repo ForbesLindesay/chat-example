@@ -1,30 +1,40 @@
 'use strict';
 
+// RUN_SERVER_SIDE
+
 import bicycle from '../bicycle/server';
 import {applyFilter, applySort} from '../bicycle/utils';
-
-export const RUN_SERVER_SIDE = true;
 
 let database = {
   channels: [
     {id: 'react', name: 'React'},
     {id: 'redux', name: 'Redux'},
-  ]
+  ],
+  messages: []
 };
 
-function getCount(collectionName, query) {
-  return database[collectionName].filter(function (record) {
+function getCount(collectionName, query, {user, session}) {
+  var collection = database[collectionName];
+  if (collectionName === 'channels' && user) {
+    collection = collection.concat([{id: 'private:' + user.id, name: user.name || user.id}]);
+  }
+  return collection.filter(function (record) {
     return applyFilter(query.filter, record);
   }).length
 }
 
-function getRange(collectionName, query) {
-  return database[collectionName].filter(function (record) {
+function getRange(collectionName, query, {user, session}) {
+  var collection = database[collectionName];
+  if (collectionName === 'channels' && user) {
+    collection = collection.concat([{id: 'private:' + user.id, name: user.name || user.id}]);
+  }
+  return collection.filter(function (record) {
     return applyFilter(query.filter, record);
-  }).slice(query.offset || 0, query.limit === -1 ? Infinity : (query.offset + query.limit));
+  }).sort(applySort.bind(null, query.sort)).slice(query.offset || 0, query.limit === -1 ? Infinity : (query.offset + query.limit));
 }
 
-function setItem(collectionName, id, value) {
+var subscriptions = [];
+function setItem(collectionName, id, value, {user, session}) {
   let found = false;
   let collection = database[collectionName].map(
     item => {
@@ -40,10 +50,6 @@ function setItem(collectionName, id, value) {
     ...database,
     [collectionName]: collection
   };
-  console.log('Database:');
-  console.dir(database);
 }
 
-export default function (request) {
-  return bicycle(request, {getCount, getRange, setItem});
-}
+export default bicycle({getCount, getRange, setItem});

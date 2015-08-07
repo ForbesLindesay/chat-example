@@ -4,4 +4,5 @@ export function applyFilter(filter, object) {
 }
 export function applySort(sort, a, b) {
   // TODO: implement this
+  return a.id > b.id ? 1 : -1;
 }
