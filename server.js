@@ -1,32 +1,12 @@
 'use strict';
 
-var express = require('express');
-var passport = require('passport');
-var moped = require('./moped/server');
+var moped = require('./moped');
+var BICYCLE_REQUEST = require('./bicycle/src/actions').BICYCLE_REQUEST;
+var createMiddleware = require('./bicycle/src/middleware');
+var api = require('./src/api');
 
-var server = express();
-server.use(function (req, res, next) {
-  //req.user = {id: 'forbes', name: 'Forbes'};
-  next();
-});
+var app = moped(require.resolve('./src'));
 
-server.use(require('cookie-session')({
-  keys: [process.env.COOKIE_SECRET || 'dsfdsasfdas'],
-  signed: true
-}));
+app.handleActions(BICYCLE_REQUEST, createMiddleware(api, function () { return {}; }));
 
-server.use(passport.initialize());
-server.use(passport.session());
-
-var app = moped(require.resolve('./app'), {longPoll: true});
-
-// Handle bicycle actions on the server side
-app.handleActions(require('./bicycle/server').actionTypes, require('./api'));
-app.handleActions('LOG_IN', function (action, req) {
-  return req.login({id: action.name.toLowerCase(), name: action.name});
-});
-
-server.use(app);
-
-server.listen(3000);
-console.log('listening on port 3000');
+app.listen(3000);

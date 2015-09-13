@@ -1,10 +1,10 @@
 var Promise = require('promise');
 
 module.exports = function promiseMiddleware(store) {
-  return function (next, onError) {
+  return function (next) {
     return function (action) {
-      action && typeof action.then === 'function'
-        ? Promise.resolve(action).done(next, onError)
+      return action && typeof action.then === 'function'
+        ? Promise.resolve(action).then(next)
         : next(action);
     }
   }

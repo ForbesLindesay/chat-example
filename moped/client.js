@@ -3,7 +3,7 @@
 var Promise = require('promise');
 var React = require('react');
 var Router = require('react-router').Router;
-var history = require('react-router/lib/BrowserHistory').history;
+var createHistory = require('history/lib/createBrowserHistory');
 var Redux = require('redux');
 var ReduxProvider = require('react-redux').Provider;
 var request = require('then-request');
@@ -32,7 +32,29 @@ middleware.unshift(function (store) {
       next(action);
       if (HANDLED_ACTIONS[action.type] && !action.mopedFromServer) {
         // TODO: handle errors and timeouts
-        next(request('POST', '/action', {json: action, qs: {session: MOPED_SESSION_KEY}}).getBody('utf8').then(JSON.parse));
+        return request(
+          'POST',
+          '/action',
+          {
+            json: action,
+            qs: {
+              session: MOPED_SESSION_KEY
+            },
+            headers: {
+              'x-csrf-token': MOPED_CSRF_TOKEN
+            }
+          }
+        ).getBody('utf8').then(JSON.parse).then(null, function (err) {
+          return [{
+            type: 'REQUEST_FAILED',
+            ...action.onError,
+            error: err
+          }];
+        }).then(function (results) {
+          results.forEach(function (result) {
+            next(result);
+          });
+        });
       }
     }
   }
@@ -45,12 +67,6 @@ var store = Redux.applyMiddleware.apply(null, middleware)(Redux.createStore)(
 INITIAL_STATE = null;
 window.REDUX_STORE = store;
 
-var realTime = require(REALTIME_PATH);
-if (typeof realTime === 'function') {
-  realTime = {default: realTime};
-}
-realTime.default(store, MOPED_SESSION_KEY);
-
 function createRoot() {
   return React.createElement(
     ReduxProvider,
@@ -58,7 +74,7 @@ function createRoot() {
     function () {
       return React.createElement(
         Router,
-        {children: app.routes, history}
+        {children: app.routes, history: createHistory()}
       );
     }
   );
