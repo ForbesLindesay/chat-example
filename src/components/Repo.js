@@ -18,6 +18,7 @@ export default class Repo extends Component {
           <Link to={`/${login}`}>
             {login}
           </Link>
+          <button onClick={this.props.onToggleStarred} style={{float: 'right'}}>{repo.isStarred ? 'unstar' : 'star'}</button>
         </h3>
         {description &&
           <p>{description}</p>

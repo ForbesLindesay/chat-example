@@ -37,12 +37,28 @@ function updateCache(state, action) {
         return data;
       }
     }
+    var data = walk(action.payload.schema.format, action.payload.data);
+    var format = action.payload.schema.format;
+    var nextToken, count;
+    if (action.payload.paged) {
+      if (action.payload.paged.currentToken) {
+        if (
+          !(
+            state[action.payload.path] &&
+            state[action.payload.path].nextToken === action.payload.paged.currentToken
+          )
+        ) {
+          console.error('Invalid page recieved, ignoring');
+          return state;
+        }
+        data = state[action.payload.path].data.concat(data);
+      }
+      nextToken = action.payload.paged.nextToken;
+      count = action.payload.paged.count;
+    }
     return {
       ...state,
-      [action.payload.path]: {
-        data: walk(action.payload.schema.format, action.payload.data),
-        format: action.payload.schema.format
-      }
+      [action.payload.path]: {data, format, nextToken, count}
     };
   } else {
     return state;

@@ -1,4 +1,5 @@
 .moped-babel-cache
+api-token.txt
 lib-cov
 *.seed
 *.log

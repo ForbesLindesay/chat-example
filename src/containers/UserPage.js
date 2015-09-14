@@ -9,17 +9,13 @@ class UserPage extends Component {
   constructor(props) {
     super(props);
     this.renderRepo = this.renderRepo.bind(this);
-    this.handleLoadMoreClick = this.handleLoadMoreClick.bind(this);
-  }
-
-  handleLoadMoreClick() {
-    this.props.loadStarred(this.props.login, true);
   }
 
   renderRepo(repo) {
     return (
       <Repo repo={repo}
             owner={repo.owner}
+            onToggleStarred={() => this.props.onToggleStarred(repo.fullName)}
             key={repo.fullName} />
     );
   }
@@ -28,19 +24,29 @@ class UserPage extends Component {
     const { user } = this.props;
     const login = this.props.params.login;
 
-    if (!user) {
+    if (this.props.userLoading) {
       return <h1><i>Loading {login}’s profile...</i></h1>;
+    }
+    if (this.props.userError) {
+      return <div></div>;
+    }
+    if (!this.props.user) {
+      return <div>WTF</div>;
     }
 
     //const { starredRepos, starredRepoOwners, starredPagination } = this.props;
+    const loadingLabel = `Loading ${login}’s starred...`;
     return (
       <div>
         <User user={user} />
         <hr />
         <List renderItem={this.renderRepo}
               items={(this.props.starredRepos || [])}
-              onLoadMoreClick={this.handleLoadMoreClick}
-              loadingLabel={`Loading ${login}’s starred...`} />
+              loadingLabel={loadingLabel}
+              onLoadMoreClick={() => this.props.starredReposNext()}
+              isFetching={!!this.props.starredReposLoading}
+              isLastPage={!this.props.starredReposNext}
+        />
       </div>
     );
   }
@@ -62,5 +68,15 @@ export default connect(
   props => ({
     user: '/users/' + props.params.login,
     starredRepos: '/users/' + props.params.login + '/starred',
+  }),
+  (request, props) => ({
+    onToggleStarred: (fullName) => (
+      request(
+        'update',
+        '/repos/' + fullName + '/' + (
+          props.starredRepos.filter(r => r.fullName === fullName)[0].isStarred ? 'star' : 'unstar'
+        )
+      )
+    )
   })
 )(UserPage);

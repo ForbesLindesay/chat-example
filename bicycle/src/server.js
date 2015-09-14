@@ -76,66 +76,88 @@ export default function createApi(schema) {
     };
     selectedLocation._data = options;
   }
-  return {
-    handle({method, context, path, input, qs}) {
-      assert(typeof method === 'string', 'Method must be a string');
-      assert(method in paths, '"' + method + '" is not a valid method');
-      assert(typeof path === 'string' && path[0] === '/');
-      let pathSegments = path.split('/').slice(1);
-      let locations =
-        pathSegments.reduce(function (locations, segment) {
-          return locations.map(
-            l => (l[segment] ? [l[segment]] : []).concat(l['$'] ? [l['$']] : [])
-          ).reduce((a, b) => a.concat(b), []);
-        }, [paths[method]]);
-      if (locations.length !== 1 || !locations[0]._data) {
-        return Promise.resolve({status: 404, error: 'Path Not Found', method, path, input, qs});
+  function handle({method, context, path, input, qs}) {
+    assert(typeof method === 'string', 'Method must be a string');
+    assert(method in paths, '"' + method + '" is not a valid method');
+    assert(typeof path === 'string', '"path" should be a string');
+    if (path[0] !== '/') {
+      return Promise.resolve({status: 404, error: 'Path Not Found: ' + path, method, path, input, qs});
+    }
+    let pathSegments = path.split('/').slice(1);
+    let locations =
+      pathSegments.reduce(function (locations, segment) {
+        return locations.map(
+          l => (l[segment] ? [l[segment]] : []).concat(l['$'] ? [l['$']] : [])
+        ).reduce((a, b) => a.concat(b), []);
+      }, [paths[method]]);
+    if (locations.length !== 1 || !locations[0]._data) {
+      return Promise.resolve({status: 404, error: 'Path Not Found: ' + path, method, path, input, qs});
+    }
+    var params = {qs}
+    locations[0]._data.pattern.forEach(
+      (segment, i) => {
+        if (segment !== '_') params[segment] = pathSegments[i];
       }
-      var params = {qs}
-      locations[0]._data.pattern.forEach(
-        (segment, i) => {
-          if (segment !== '_') params[segment] = pathSegments[i];
-        }
-      );
-      return Promise.resolve(locations[0]._data.handler(context, params, input)).then(
-        data => ({status: 200, schema: locations[0]._data.schema, data, method, path, input, qs})
-      );
-    },
-    create(path, inputType, outputType, handler) {
-      addHandler({
-        method: 'create',
-        path,
-        inputType,
-        outputType,
-        handler
-      });
-    },
-    read(path, outputType, handler) {
-      addHandler({
-        method: 'read',
-        path,
-        outputType,
-        handler
-      });
-    },
-    update(path, inputType, outputType, handler) {
-      addHandler({
-        method: 'update',
-        path,
-        inputType,
-        outputType,
-        handler
-      });
-    },
-    remove(path, outputType, handler) {
-      addHandler({
-        method: 'remove',
-        path,
-        outputType,
-        handler
-      });
-    },
+    );
+    var args = [context, params];
+    if (method !== 'read' && method !== 'remove') {
+      args.push(input);
+    }
+    var paged = undefined;
+    if (qs && qs['bicycle-page-token']) {
+      paged = {};
+      paged.currentToken = qs && qs.bicycle_page_token
+    }
+    args.push({
+      currentToken: qs && qs.bicycle_page_token,
+      setNextToken(token) {
+        paged = paged || {};
+        paged.nextToken = token;
+      },
+      setCount(count) {
+        paged = paged || {};
+        paged.count = count;
+      }
+    });
+    return Promise.resolve(locations[0]._data.handler.apply(null, args)).then(
+      data => ({status: 200, schema: locations[0]._data.schema, data, method, path, input, qs, paged})
+    );
+  }
+  handle.create = function create(path, inputType, outputType, handler) {
+    addHandler({
+      method: 'create',
+      path,
+      inputType,
+      outputType,
+      handler
+    });
   };
+  handle.read = function read(path, outputType, handler) {
+    addHandler({
+      method: 'read',
+      path,
+      outputType,
+      handler
+    });
+  };
+  handle.update = function update(path, inputType, outputType, handler) {
+    addHandler({
+      method: 'update',
+      path,
+      inputType,
+      outputType,
+      handler
+    });
+  };
+  handle.remove = function remove(path, outputType, handler) {
+    addHandler({
+      method: 'remove',
+      path,
+      outputType,
+      handler
+    });
+  };
+  return handle;
 }
 
 function getAllTypes(typeDef) {

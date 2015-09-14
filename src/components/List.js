@@ -14,7 +14,7 @@ export default class List extends Component {
 
   render() {
     const {
-      isFetching, nextPageUrl, pageCount,
+      isFetching, isLastPage,
       items, renderItem, loadingLabel
     } = this.props;
 
@@ -23,7 +23,6 @@ export default class List extends Component {
       return <h2><i>{loadingLabel}</i></h2>;
     }
 
-    const isLastPage = !nextPageUrl;
     if (isEmpty && isLastPage) {
       return <h1><i>Nothing here!</i></h1>;
     }
@@ -31,7 +30,7 @@ export default class List extends Component {
     return (
       <div>
         {items.map(renderItem)}
-        {pageCount > 0 && !isLastPage && this.renderLoadMore()}
+        {!isLastPage && this.renderLoadMore()}
       </div>
     );
   }
@@ -39,12 +38,11 @@ export default class List extends Component {
 
 List.propTypes = {
   loadingLabel: PropTypes.string.isRequired,
-  pageCount: PropTypes.number,
   renderItem: PropTypes.func.isRequired,
   items: PropTypes.array.isRequired,
-  isFetching: PropTypes.bool.isRequired,
   onLoadMoreClick: PropTypes.func.isRequired,
-  nextPageUrl: PropTypes.string
+  isFetching: PropTypes.bool.isRequired,
+  isLastPage: PropTypes.bool.isRequired
 };
 
 List.defaultProps = {
