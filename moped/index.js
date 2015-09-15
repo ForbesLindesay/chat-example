@@ -140,7 +140,7 @@ module.exports = function initialize(APP_PATH, options) {
                 if (actionHandlers[action.type] && !action.mopedFromServer) {
                   return processServerAction(mopedSessionKey, action, req).then(function (results) {
                     results.forEach(function (result) {
-                      next(result);
+                      next(JSON.parse(JSON.stringify(result)));
                     });
                   });
                 }

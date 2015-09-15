@@ -7,6 +7,9 @@ export default function createApi(schema) {
     if (isBuiltInType(key)) {
       throw new Error('You are attempting to redefine the built in type "' + key + '"');
     }
+    if (!/^[A-Z][A-Za-z]*$/.test(key)) {
+      throw new Error('Invalid type name "' + key + '".  Types must begin with a capital letter.');
+    }
     if (!typeof schema[key]._id === 'string') {
       throw new Error(key + ' does not specify an id.');
     }
@@ -195,6 +198,7 @@ function isBuiltInType(name) {
   return [
     'string',
     'number',
-    'boolean'
+    'boolean',
+    'void',
   ].indexOf(name) !== -1;
 }

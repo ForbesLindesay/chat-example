@@ -15,7 +15,8 @@ class UserPage extends Component {
     return (
       <Repo repo={repo}
             owner={repo.owner}
-            onToggleStarred={() => this.props.onToggleStarred(repo.fullName)}
+            onToggleStarred={() => this.props.onToggleStarred(repo)}
+            isTogglingStarred={this.props.onToggleStarredLoading(repo)}
             key={repo.fullName} />
     );
   }
@@ -70,11 +71,11 @@ export default connect(
     starredRepos: '/users/' + props.params.login + '/starred',
   }),
   (request, props) => ({
-    onToggleStarred: (fullName) => (
+    onToggleStarred: repo => (
       request(
         'update',
-        '/repos/' + fullName + '/' + (
-          props.starredRepos.filter(r => r.fullName === fullName)[0].isStarred ? 'star' : 'unstar'
+        '/repos/' + repo.fullName + '/' + (
+          repo.isStarred ? 'unstar' : 'star'
         )
       )
     )

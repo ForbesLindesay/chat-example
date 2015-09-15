@@ -9,7 +9,7 @@ export default function (query, mutate) {
     function (dispatch) {
       return {dispatch};
     },
-    function ({props, pending, nextTokens}, {dispatch}, ownProps) {
+    function ({props, pending, nextTokens, status}, {dispatch}, ownProps) {
       var nextPageMethods = {};
       pending.forEach(function (q) {
         dispatch(request('read', q));
@@ -33,7 +33,15 @@ export default function (query, mutate) {
         (method, path, input, qs) => dispatch(request(method, path, input, qs)),
         fullProps
       );
-      return {...fullProps, ...m};
+      var mLoading = mutate(
+        (method, path) => status[method][path] && status[method][path].loading,
+        fullProps
+      );
+      var finalProps = {...fullProps, ...m};
+      Object.keys(mLoading).forEach(function (key) {
+        finalProps[key + 'Loading'] = mLoading[key];
+      });
+      return finalProps;
     }
   );
   return c;
@@ -63,7 +71,7 @@ function selectState(state, query) {
       nextTokens[key] = [q, state.cache[q].nextToken];
     }
   });
-  return {props, pending, nextTokens};
+  return {props, pending, nextTokens, status: state.status};
 }
 
 function reconstruct(data, format, objects) {

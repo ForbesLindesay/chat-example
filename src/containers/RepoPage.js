@@ -30,7 +30,8 @@ class RepoPage extends Component {
     return (
       <div>
         <Repo repo={this.props.repo} owner={this.props.repo.owner}
-          onToggleStarred={() => this.props.onToggleStarred(repo.fullName)}
+          onToggleStarred={() => this.props.onToggleStarred(repo)}
+          isTogglingStarred={this.props.onToggleStarredLoading(repo)}
         />
         <hr />
         <List renderItem={this.renderUser}
@@ -51,8 +52,13 @@ export default connect(
     stargazers : '/repos/' + props.params.login + '/' + props.params.name + '/stargazers',
   }),
   (request, props) => ({
-    onToggleStarred: (fullName) => (
-      request('update', '/repos/' + fullName + '/' + (props.repo.isStarred ? 'star' : 'unstar'))
+    onToggleStarred: repo => (
+      request(
+        'update',
+        '/repos/' + repo.fullName + '/' + (
+          repo.isStarred ? 'unstar' : 'star'
+        )
+      )
     )
   })
 )(RepoPage);

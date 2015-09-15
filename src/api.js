@@ -15,10 +15,10 @@ try {
 const client = github({version: 3, auth: API_TOKEN});
 const api = createApi({
   User: {
-    _id: 'id'
+    _id: 'login'
   },
   Repo: {
-    _id: 'id'
+    _id: 'fullName'
   }
 });
 
@@ -67,6 +67,22 @@ api.read('/repos/:owner/:repo/stargazers', ['Repo'], function (ctx, params, pagi
     if (result.urlNext) paging.setNextToken(result.urlNext);
     return camelizeKeys(result);
   });
+});
+
+function delay(ms, value) {
+  return new Promise(resolve => setTimeout(resolve.bind(null, value), ms));
+}
+api.update('/repos/:owner/:repo/star', 'void', 'Repo', function (ctx, params, repo, paging) {
+  var fullName = params.owner + '/' + params.repo;
+  if (starredRepos.indexOf(fullName) === -1) {
+    starredRepos.push(fullName);
+  }
+  return delay(2000, {fullName: fullName, isStarred: true});
+});
+api.update('/repos/:owner/:repo/unstar', 'void', 'Repo', function (ctx, params, repo, paging) {
+  var fullName = params.owner + '/' + params.repo;
+  starredRepos = starredRepos.filter(n => n !== fullName);
+  return delay(2000, {fullName: fullName, isStarred: false});
 });
 
 export default api;
